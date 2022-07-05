@@ -2,6 +2,7 @@ from tkinter import *
 from tkinter import messagebox
 from random import choice, randint, shuffle
 import pyperclip
+import json
 
 BLUE = "#2D4263"
 WHITE = "#ECDBBA"
@@ -30,18 +31,54 @@ def save_password():
     website = website_entry.get()
     user = user_entry.get()
     password = password_entry.get()
+    new_data = {
+        website: {
+            "email": user,
+            "password": password,
+        }
+    }
 
     if len(website) == 0 or len(password) == 0:
         messagebox.showinfo(title="Oops", message="Please don't leave any fields empty!")
 
     else:
-        is_ok = messagebox.askokcancel(title="website", message=f"These are the details: \nEmail: {user} \n"
-                                                                f"Password: {password} \nCan we save this details?")
-        if is_ok:
-            with open("data.txt", "a") as file:
-                file.write(f"{website} | {user} | {password}\n")
-                website_entry.delete(0, END)
-                password_entry.delete(0, END)
+        try:
+            with open("data.json", "r") as data_file:
+                # Reading old data
+                data = json.load(data_file)
+                # Updating old data with new data
+                data.update(new_data)
+
+        except FileNotFoundError:
+            with open("data.json", "w") as data_file:
+                # Saving updated data
+                json.dump(new_data, data_file, indent=4)
+
+        else:
+            with open("data.json", "w") as data_file:
+                # Saving updated data
+                json.dump(data, data_file, indent=4)
+
+        finally:
+            website_entry.delete(0, END)
+            password_entry.delete(0, END)
+
+
+# ----------------------------- SEARCH --------------------------------#
+def search():
+    site_address = website_entry.get()
+
+    try:
+        with open("data.json", "r") as data_file:
+            data = json.load(data_file)
+        email = data[site_address]["email"]
+        password = data[site_address]["password"]
+    except FileNotFoundError:
+        messagebox.showinfo(title="Oops", message="There is no data file containing user credentials")
+    except KeyError:
+        messagebox.showinfo(title="Oops", message=f"There is no user credentials for {site_address}")
+    else:
+        messagebox.showinfo(title=f"Site Information for {site_address}", message=f"Email: {email} \nPassword: {password}")
 
 
 # ---------------------------- UI SETUP ------------------------------- #
@@ -64,7 +101,7 @@ password_label.grid(row=3, column=0, padx=2)
 
 # Entries
 website_entry = Entry(font=FONT)
-website_entry.grid(row=1, column=1, columnspan=2, sticky="EW", padx=2, pady=2)
+website_entry.grid(row=1, column=1, sticky=E+W+N+S, padx=2, pady=2)
 website_entry.focus()
 user_entry = Entry(font=FONT)
 user_entry.grid(row=2, column=1, columnspan=2, sticky="EW", padx=2, pady=2)
@@ -77,6 +114,7 @@ genpas_button = Button(text="Generate Password", font=FONT, command=generate_pas
 genpas_button.grid(row=3, column=2, padx=2, pady=2)
 add_button = Button(text="Add", width=35, font=FONT, command=save_password)
 add_button.grid(row=4, column=1, columnspan=2, sticky="EW", padx=2, pady=2)
-
+search_button = Button(text="Search", font=FONT, command=search)
+search_button.grid(row=1, column=2, sticky="EW", padx=2, pady=2)
 
 window.mainloop()
